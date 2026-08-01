@@ -285,6 +285,12 @@ class AuthPanel {
         areaA.setWrapStyleWord(true);
         areaA.setEditable(true);
         refs.accountACredField = areaA;
+        // 修复：用户手动编辑文本时同步更新 extender.accountA_cred
+        areaA.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { extender.accountA_cred = areaA.getText(); }
+            public void removeUpdate(DocumentEvent e) { extender.accountA_cred = areaA.getText(); }
+            public void changedUpdate(DocumentEvent e) { extender.accountA_cred = areaA.getText(); }
+        });
         JScrollPane scrollA = new JScrollPane(areaA);
         panelA.add(scrollA, BorderLayout.CENTER);
 
@@ -295,6 +301,12 @@ class AuthPanel {
         areaB.setWrapStyleWord(true);
         areaB.setEditable(true);
         refs.accountBCredField = areaB;
+        // 修复：用户手动编辑文本时同步更新 extender.accountB_cred
+        areaB.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { extender.accountB_cred = areaB.getText(); }
+            public void removeUpdate(DocumentEvent e) { extender.accountB_cred = areaB.getText(); }
+            public void changedUpdate(DocumentEvent e) { extender.accountB_cred = areaB.getText(); }
+        });
         JScrollPane scrollB = new JScrollPane(areaB);
         panelB.add(scrollB, BorderLayout.CENTER);
 

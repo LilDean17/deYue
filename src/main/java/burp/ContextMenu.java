@@ -41,8 +41,8 @@ class ContextMenu {
         List<JMenuItem> menuItems = new ArrayList<>();
 
         // 发送到deYue检测
-        JMenuItem sendToXiaYue = new JMenuItem("发送到deYue检测");
-        sendToXiaYue.addActionListener(new ActionListener() {
+        JMenuItem sendToDeYue = new JMenuItem("发送到deYue检测");
+        sendToDeYue.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 IHttpRequestResponse[] messages = invocation.getSelectedMessages();
@@ -91,7 +91,7 @@ class ContextMenu {
             }
         });
 
-        menuItems.add(sendToXiaYue);
+        menuItems.add(sendToDeYue);
         menuItems.add(extractAuth);
         menuItems.add(quickConfig);
         return menuItems;

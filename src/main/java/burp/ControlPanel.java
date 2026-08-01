@@ -35,12 +35,9 @@ class ControlPanel {
             public void itemStateChanged(ItemEvent e) {
                 if (refs.chkbox1.isSelected()) {
                     extender.switchs = 1;
-                    extender.setAuthTextAreaEditable(0, false);
-                    extender.setAuthTextAreaEditable(1, false);
+                    // 凭据字段始终可编辑，避免选完不能改的 bug
                 } else {
                     extender.switchs = 0;
-                    extender.setAuthTextAreaEditable(0, true);
-                    extender.setAuthTextAreaEditable(1, true);
                 }
                 configManager.save();
             }

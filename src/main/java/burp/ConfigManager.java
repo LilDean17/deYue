@@ -97,9 +97,9 @@ class ConfigManager {
                 extender.unauthorizedTextArea.setText(extender.data_2);
             }
 
-            boolean editable = extender.switchs != 1;
-            if (refs.accountACredField != null) refs.accountACredField.setEditable(editable);
-            if (refs.accountBCredField != null) refs.accountBCredField.setEditable(editable);
+            // 凭据字段始终可编辑（修复：之前根据 switchs 状态设为不可编辑，导致选完凭据后无法修改）
+            if (refs.accountACredField != null) refs.accountACredField.setEditable(true);
+            if (refs.accountBCredField != null) refs.accountBCredField.setEditable(true);
         } catch (Exception e) {
             stdout.println("更新UI状态时发生错误: " + e.getMessage());
         }

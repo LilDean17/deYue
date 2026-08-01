@@ -135,7 +135,10 @@ class VulnDetector {
         String[] authHeaderNames = extender.unauthorizedFieldCache;
 
         // ---- ① 账号A（高权限）请求 ----
-        List<String> headers_a = buildHeadersWithCredential(baseHeaders, authHeaderNames, extender.accountA_cred);
+        // A 未配时仍照常发请求（A 请求 = 未授权请求），所有相似度对比都失效，
+        // 统一在 lowSim_data / unauthorizedSim_data 显示 "N/A"，不输出日志也不跳过。
+        boolean aCredConfigured = extender.accountA_cred != null && !extender.accountA_cred.trim().isEmpty();
+        List<String> headers_a = buildHeadersWithCredential(baseHeaders, authHeaderNames, aCredConfigured ? extender.accountA_cred : null);
         byte[] newRequest_a = extender.helpers.buildHttpMessage(headers_a, body);
         IHttpRequestResponse requestResponse_a = extender.callbacks.makeHttpRequest(iHttpService, newRequest_a);
 
@@ -179,16 +182,20 @@ class VulnDetector {
         double simB = ResponseSimilarity.compareResponses(aBody, bBody);  // A vs B
         double simW = ResponseSimilarity.compareResponses(aBody, wBody);  // A vs 未授权
 
-        // 凭据未配置时显示 "N/A"，避免误判为 IDOR
-        String lowSim_data = bCredConfigured
+        // 凭据未配置时两列相似度都置 "N/A"，避免误判
+        // A 或 B 任意一个未配 → lowSim_data / unauthorizedSim_data 都失效
+        // （A 配 + B 未配时 simW 仍可计算，但按用户要求统一显示 N/A）
+        String lowSim_data = (aCredConfigured && bCredConfigured)
             ? ResponseSimilarity.formatSimilarity(simB)
-            : "N/A (未配置B凭据)";
-        String unauthorizedSim_data = ResponseSimilarity.formatSimilarity(simW);
+            : "N/A";
+        String unauthorizedSim_data = (aCredConfigured && bCredConfigured)
+            ? ResponseSimilarity.formatSimilarity(simW)
+            : "N/A";
 
-        // === 检测结果判定（依据 需求变更文档.md）===
-        // 无参: A vs B 比对无意义，仅根据 A vs 未授权判定 unauthorized
-        // 有参: A vs B ≥0.98 → idor；A vs 未授权 ≥0.98 → unauthorized；可同时命中
-        String detectionResult = computeDetectionResult(hasParams, simB, simW, bCredConfigured);
+        // === 检测结果判定 ===
+        // A 或 B 任意一个未配 → 输出 "账号X凭据未配置"（A 优先）
+        // A 配 + B 配 → 按 需求变更文档.md 判定 idor / unauthorized / 空
+        String detectionResult = computeDetectionResult(hasParams, simB, simW, aCredConfigured, bCredConfigured);
 
         // 精简调试日志（保留最关键信息）
         extender.stdout.println("====== 检测结果 ====== URL: " + extender.temp_data);
@@ -266,27 +273,35 @@ class VulnDetector {
     /**
      * 依据 需求变更文档.md 判定检测结果
      * <pre>
-     * 无参:
-     *   - A vs B 比对无意义
-     *   - A vs 未授权 ≥0.98 → "unauthorized"
-     *   - 否则 → ""
-     * 有参:
-     *   - A vs B ≥0.98 → "idor"
-     *   - A vs 未授权 ≥0.98 → "unauthorized"
-     *   - 可同时命中 → "idor+unauthorized"
-     *   - 否则 → ""
+     * 凭据未配齐（任一缺失）：
+     *   - A 优先：A 未配 → "账号A凭据未配置"
+     *   - 否则 B 未配 → "账号B凭据未配置"
+     *
+     * A + B 都配：
+     *   - 无参: A vs 未授权 ≥0.98 → "unauthorized"，否则 ""
+     *   - 有参: A vs B ≥0.98 → "idor"；A vs 未授权 ≥0.98 → "unauthorized"；可同时命中
      * </pre>
      *
      * @param hasParams        请求是否含参数
      * @param simB             A 响应 vs B 响应的相似度
      * @param simW             A 响应 vs 未授权响应的相似度
-     * @param bCredConfigured  B 凭据是否已配置（未配置时跳过 idor 判定）
-     * @return 检测结果字符串，可空
+     * @param aCredConfigured  A 凭据是否已配置
+     * @param bCredConfigured  B 凭据是否已配置
+     * @return 检测结果字符串
      */
-    private String computeDetectionResult(boolean hasParams, double simB, double simW, boolean bCredConfigured) {
+    private String computeDetectionResult(boolean hasParams, double simB, double simW,
+                                          boolean aCredConfigured, boolean bCredConfigured) {
+        // A 优先：A 未配直接返回
+        if (!aCredConfigured) {
+            return "账号A凭据未配置";
+        }
+        if (!bCredConfigured) {
+            return "账号B凭据未配置";
+        }
+        // A、B 都配齐，按阈值判定
         final double THRESHOLD = 0.98;
         java.util.List<String> results = new java.util.ArrayList<>();
-        if (hasParams && bCredConfigured && simB >= THRESHOLD) {
+        if (hasParams && simB >= THRESHOLD) {
             results.add("idor");
         }
         if (simW >= THRESHOLD) {

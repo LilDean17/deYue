@@ -258,14 +258,6 @@ public class BurpExtender extends AbstractTableModel
         return "";
     }
 
-    void setAuthTextAreaEditable(int index, boolean editable) {
-        if (index == 0 && refs.accountACredField != null) {
-            refs.accountACredField.setEditable(editable);
-        } else if (index == 1 && refs.accountBCredField != null) {
-            refs.accountBCredField.setEditable(editable);
-        }
-    }
-
     // ==================== 清空数据 ====================
 
     void clearAllData() {
